@@ -17,6 +17,8 @@ class DS18X20:
         self.ow = onewire
         self.buf = bytearray(9)
         self.roms = self.scan()
+        self.offsets = {}
+        self.calibrate_with_next_read = False
 
     def scan(self):
         self.roms = [rom for rom in self.ow.scan() if rom[0] == 0x10 or rom[0] == 0x28]
@@ -63,7 +65,7 @@ class DS18X20:
         except AssertionError:
             return None
 
-# modifiziert 20.02.2020 Didi Lamken
+    # modifiziert 20.02.2020 Didi Lamken
     def read_all(self, ds_positions=None):
         roms = self.roms
         data = {}
@@ -77,10 +79,51 @@ class DS18X20:
                 # ds18b20tmp =  '99.9'
                 continue
             print(ds18b20tmp, end=' ')
-            if ds_positions:
+            if name in self.offsets:
+                ds18b20tmp += self.offsets[name]
+                print("->("+str(ds18b20tmp)+")", end=" ")
+            if ds_positions and ds_positions is not None:
                 if name in ds_positions:
                     data[ds_positions[name]] = ds18b20tmp
             else:
                 data[name] = ds18b20tmp
-        print( ' Sensors:', len(roms) )
+        print( ' Sensors:', len(roms))
+        if self.calibrate_with_next_read:
+            # calibrate the sensors according to current readings mean
+            self.adjust_all_to_middle_temp(data, ds_positions)
         return data
+    
+    # added by Max Ruemmler 22.05.2023
+    def activate_calibration(self):
+        self.calibrate_with_next_read = True
+
+    def adjust_all_to_middle_temp(self, current_data, ds_positions):
+        sum = 0
+        # get the key for each sensor and 
+        # calc the mean of all measurements
+        print("Staring calibration with data", current_data)
+        print("DS Positions", ds_positions)
+        print("Offsets", self.offsets)
+        sensor_names = {}
+        for sensor, cur_val in current_data.items():
+            if ds_positions and ds_positions is not None:
+                name = [k for k, v in ds_positions.items() if v == sensor]
+                name = name[0] if name else "error"
+            else:
+                name = sensor
+            sensor_names[sensor] = name
+            if name in self.offsets.keys():
+                cur_val -= self.offsets[name]
+            sum += cur_val
+        temp_mean = sum/len(current_data)
+        # calc offsets for each sensor
+        for sensor, cur_val in current_data.items():
+            name = sensor_names[sensor]
+            if name in self.offsets.keys():
+                cur_val -= self.offsets[name]
+            self.offsets[name] = temp_mean - cur_val
+        print("Calibration complete!")
+        print(self.offsets)
+        self.calibrate_with_next_read = False
+            
+        

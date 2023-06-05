@@ -69,7 +69,9 @@
             "measurement_interval": 5,
             "until_wifi_reconnect" : 12,
             "oled": false,
-            "plt": false
+            "plt": false,
+            "button_sensor_calib_enabled": true,
+            "button_sensor_calib_pin": "P14"
         }
     }
 }
