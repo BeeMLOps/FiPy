@@ -51,6 +51,8 @@ reset_causes = {
 _config = Config.getInstance()
 _ds_positions = {v: k for k, v in
                  _config.get_value('sensors', 'ds1820', 'positions').items()}
+if "" in _ds_positions.keys():
+    _ds_positions.pop("") # M. Ruemmler: remove the standard configuration to reduce error
 _wm = WLanManager(_config)
 _wlan = network.WLAN(id=0)
 
@@ -86,10 +88,21 @@ def register_ap_button_callback():
                         handler=enable_ap)
         print("Callback registered...")
 
+# added by Max Rümmler, 22.05.2023
+def register_calibrate_button_callback():
+    if _config.get_value('general', 'general', 'button_sensor_calib_enabled'):
+        global button_calib
+        calib_pin = _config.get_value('general', 'general', 'button_sensor_calib_pin')
+        button_calib = machine.Pin(calib_pin, mode=machine.Pin.IN, pull=machine.Pin.PULL_UP)
+        print("Calibration Pin {0} set.".format(calib_pin))
+        button_calib.callback(machine.Pin.IRQ_FALLING,
+                        handler=start_ds18x20_calib)
+        print("Callback registered...")
 
 # start main measurement cycle
 def start_measurement():
     register_ap_button_callback()
+    register_calibrate_button_callback()
     global cycle, loop_run, crcerrcnt
 
     perf = machine.Timer.Chrono()
@@ -178,6 +191,7 @@ def start_measurement():
             data.update(ds_data)
             print(' ')
         ms_ds_read = perf.read_ms() - ms_hx_read
+
         # Determine and display the time
         write_time = time.time()
         write_time = write_time + 3600                          # UTC + 1 hour
@@ -304,6 +318,12 @@ def enable_ap(pin=None):
     if not webserver.mws.IsStarted():
         webserver.mws.Start(threaded=True)
         print("Webserver started!")
+
+# run calibration - M. Rümmler 18.06.2023
+def start_ds18x20_calib(pin=None):
+    print("Entered calibration callback!")
+    ds1820.activate_calibration()
+    
 
 ###### run this #######
 
