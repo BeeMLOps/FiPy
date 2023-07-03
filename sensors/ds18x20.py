@@ -6,10 +6,13 @@
 
 from micropython import const
 import binascii
+from config import Config
 
 _CONVERT = const(0x44)
 _RD_SCRATCH = const(0xbe)
 _WR_SCRATCH = const(0x4e)
+
+_config = Config().getInstance()
 
 class DS18X20:
     def __init__(self, onewire):
@@ -17,7 +20,8 @@ class DS18X20:
         self.ow = onewire
         self.buf = bytearray(9)
         self.roms = self.scan()
-        self.offsets = {}
+        self.offsets = _config.get_value('sensors', 'ds1820', 'sensor_offsets').copy()
+        print("Offsets read from config: ", self.offsets)
         self.calibrate_with_next_read = False
 
     def scan(self):
@@ -44,7 +48,7 @@ class DS18X20:
         self.ow.writebyte(_WR_SCRATCH)
         self.ow.write(buf)
 
-# modifiziert  02.2020 Diren Senger
+    # modifiziert  02.2020 Diren Senger
     def read_temp(self, rom):
         try:
             buf = self.read_scratch(rom)
@@ -97,6 +101,7 @@ class DS18X20:
     def activate_calibration(self):
         self.calibrate_with_next_read = True
 
+    # added by Max Ruemmler 22.05.2023
     def adjust_all_to_middle_temp(self, current_data, ds_positions):
         sum = 0
         # get the key for each sensor and 
@@ -122,8 +127,14 @@ class DS18X20:
             if name in self.offsets.keys():
                 cur_val -= self.offsets[name]
             self.offsets[name] = temp_mean - cur_val
-        print("Calibration complete!")
+        # saving to user_config
+        _config.set_value("sensors", "ds1820", "sensor_offsets", self.offsets)
+        _config.write()
+        print("Calibration complete and saved to user_config!")
         print(self.offsets)
         self.calibrate_with_next_read = False
+    
+   
+            
             
         

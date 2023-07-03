@@ -191,6 +191,7 @@ def start_measurement():
             data.update(ds_data)
             print(' ')
         ms_ds_read = perf.read_ms() - ms_hx_read
+
         # Determine and display the time
         write_time = time.time()
         write_time = write_time + 3600                          # UTC + 1 hour
@@ -318,10 +319,11 @@ def enable_ap(pin=None):
         webserver.mws.Start(threaded=True)
         print("Webserver started!")
 
-# run calibration - M. Rümmler 22.05.2023
+# run calibration - M. Rümmler 18.06.2023
 def start_ds18x20_calib(pin=None):
     print("Entered calibration callback!")
     ds1820.activate_calibration()
+    
 
 ###### run this #######
 

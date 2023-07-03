@@ -46,7 +46,8 @@
                 "t_i_4": "",
                 "t_i_5": "",
                 "t_o": ""
-            }
+            },
+            "sensor_offsets": {}
         },
         "hx711": {
             "enabled": true,
